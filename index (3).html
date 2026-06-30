@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Abecê - HUB</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --bg-color: #F9F6F0; 
+            --primary: #3498DB;
+            --secondary: #2ECC71;
+            --danger: #E74C3C;
+            --text-dark: #2C3E50;
+            --text-light: #FFFFFF;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial', sans-serif; user-select: none; }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-dark);
+            overflow: hidden; height: 100vh; display: flex; flex-direction: column;
+            touch-action: none;
+        }
+
+        body.hide-vowels .vowel, 
+        body.hide-vowels .draggable-letter.vowel,
+        body.hide-vowels .board-letter.vowel {
+            background-color: var(--primary) !important;
+        }
+
+        header {
+            background-color: var(--primary); color: var(--text-light);
+            padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;
+            box-shadow: var(--shadow); z-index: 10;
+        }
+
+        .btn-icon {
+            background: none; border: none; fill: var(--text-light); width: 32px; height: 32px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
+        .screen { display: none; flex: 1; flex-direction: column; position: relative; }
+        .screen.active { display: flex; }
+
+        .btn-flat {
+            background-color: var(--primary); color: var(--text-light); border: none; border-radius: 8px;
+            padding: 12px 20px; font-size: 1.2rem; font-weight: bold; box-shadow: var(--shadow);
+            display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .btn-flat:active { transform: scale(0.95); }
+        .btn-flat.green { background-color: var(--secondary); }
+        .btn-flat.red { background-color: var(--danger); }
+
+        .fab {
+            position: absolute; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%;
+            background-color: var(--secondary); color: white; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 10px rgba(0,0,0,0.3); border: none; cursor: pointer; z-index: 50;
+        }
+        .fab:active { transform: scale(0.9); }
+
+        /* Menu Inicial */
+        #menu-screen { align-items: center; justify-content: center; }
+        .menu-cards-container {
+            display: flex; gap: 30px; justify-content: center; align-items: center;
+            flex-wrap: wrap; padding: 20px;
+        }
+        .card-btn {
+            background-color: var(--primary); color: var(--text-light); border: none;
+            border-radius: 20px; width: 160px; height: 160px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; font-size: 1.3rem; font-weight: bold;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15); cursor: pointer; transition: transform 0.2s;
+            gap: 15px;
+        }
+        .card-btn:active { transform: scale(0.92); }
+        .card-btn svg { width: 56px; height: 56px; fill: var(--text-light); }
+
+        /* Módulo 1 */
+        .tabs { display: flex; gap: 8px; margin: 20px 0; justify-content: center; flex-wrap: wrap; }
+        .tab-btn {
+            padding: 8px 12px; border: 2px solid var(--primary); background: transparent;
+            color: var(--primary); border-radius: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;
+        }
+        .tab-btn.active { background: var(--primary); color: var(--text-light); }
+        .tab-btn svg { fill: currentColor; }
+
+        .spacer-top { flex: 0.5; } 
+
+        .grid-container {
+            display: flex; justify-content: center; width: 100%; padding: 0 10px 80px 10px;
+            overflow-y: auto; flex: 2;
+        }
+        .letter-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; width: 100%;
+            max-width: 400px; align-content: start;
+        }
+
+        .letter-btn {
+            background-color: var(--text-light); border: 2px solid #ddd; border-radius: 8px;
+            font-size: 1.8rem; font-weight: bold; color: var(--text-dark); height: 60px;
+            display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); cursor: pointer;
+        }
+        .letter-btn:active { background-color: #f0f0f0; transform: scale(0.95); }
+
+        /* Jogo */
+        #game-area { display: none; flex-direction: column; align-items: center; flex: 1; justify-content: center; padding: 20px; }
+        .progress-bar { width: 100%; max-width: 400px; height: 10px; background: #ddd; border-radius: 5px; margin-bottom: 30px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+        .huge-letter {
+            font-size: 8rem; font-weight: bold; color: var(--text-dark); margin-bottom: 40px;
+            background: var(--text-light); width: 150px; height: 150px; display: flex;
+            align-items: center; justify-content: center; border-radius: 20px; box-shadow: var(--shadow); cursor: pointer;
+        }
+        .validation-controls { display: none; gap: 30px; }
+
+        /* Módulo 2 */
+        .lousa-controls {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+            padding: 8px 10px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); gap: 5px; z-index: 5;
+        }
+        
+        .slot-controls { display: flex; align-items: center; gap: 5px; border: 2px solid var(--primary); border-radius: 20px; padding: 2px; }
+        .slot-btn { background: none; border: none; color: var(--primary); font-size: 1.2rem; font-weight: bold; width: 30px; height: 30px; cursor: pointer; border-radius: 50%; }
+        .slot-btn:active { background: var(--primary); color: white; }
+        .slot-display { font-weight: bold; color: var(--primary); width: 30px; text-align: center; }
+
+        .lousa-layout { display: flex; flex: 1; overflow: hidden; }
+        
+        .side-drawer {
+            width: 70px; background: #ecf0f1; display: flex; flex-direction: column;
+            justify-content: flex-end; padding: 10px 5px 30px 5px; gap: 10px; overflow-y: auto; border-right: 1px solid #bdc3c7;
+        }
+        .side-drawer.right { border-right: none; border-left: 1px solid #bdc3c7; }
+        
+        .board-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .board-zone {
+            flex: 1; margin: 10px; border: 3px dashed #bdc3c7; border-radius: 12px;
+            background: #fff; position: relative; overflow: hidden;
+        }
+        
+        .slots-wrapper {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; width: 100%; padding: 10px;
+        }
+        .slot {
+            width: 85px; height: 85px; border: 3px dashed #bdc3c7; border-radius: 12px;
+            position: relative; display: flex; align-items: center; justify-content: center;
+        }
+
+        .bottom-drawer {
+            height: 80px; background: #ecf0f1; border-top: 1px solid #bdc3c7;
+            display: flex; align-items: center; justify-content: center; gap: 10px; padding: 5px 10px; overflow-x: auto;
+        }
+
+        .draggable-letter {
+            background-color: var(--primary); color: white; border-radius: 8px;
+            font-size: 1.5rem; font-weight: bold; width: 50px; height: 50px; display: flex;
+            align-items: center; justify-content: center; box-shadow: var(--shadow);
+            cursor: grab; touch-action: none; flex-shrink: 0;
+        }
+        .draggable-letter.vowel { background-color: var(--danger); }
+        
+        .board-letter {
+            background-color: var(--primary); color: white; border-radius: 8px;
+            font-size: 2.5rem; font-weight: bold; width: 75px; height: 75px; display: flex;
+            align-items: center; justify-content: center; box-shadow: var(--shadow);
+            cursor: grab; touch-action: none; position: absolute; z-index: 2;
+        }
+        .board-letter.vowel { background-color: var(--danger); }
+        
+        .ghost-letter {
+            position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; color: #bdc3c7; font-size: 2.5rem; font-weight: bold;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* Modais */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: var(--bg-color); padding: 25px; border-radius: 12px;
+            width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; }
+        .modal-body { margin-bottom: 20px; font-size: 1.1rem; line-height: 1.5; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="btn-icon" onclick="handleAndroidBack()">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </button>
+        <h2 id="header-title">Abecê - HUB</h2>
+        <div style="width:32px;"></div>
+    </header>
+
+    <main class="screen active" id="menu-screen">
+        <div class="menu-cards-container">
+            <button class="card-btn" onclick="abrirModulo1()">
+                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                Alfabeto Sonoro
+            </button>
+            <button class="card-btn" onclick="abrirModulo2()">
+                <svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z" fill="none"/><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 14H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                Alfabeto Móvel
+            </button>
+        </div>
+    </main>
+
+    <main class="screen" id="mod1-screen">
+        <div id="study-area" style="display:flex; flex-direction:column; height: 100%;">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="filtrarLetrasMod1('COMPLETO')">Completo</button>
+                <button class="tab-btn" onclick="filtrarLetrasMod1('VOGAIS')">Vogais</button>
+                <button class="tab-btn" onclick="filtrarLetrasMod1('CONSOANTES')">Consoantes</button>
+            </div>
+            <div class="spacer-top"></div>
+            <div class="grid-container">
+                <div class="letter-grid" id="study-grid"></div>
+            </div>
+            <button class="fab" onclick="iniciarGameMod1()">
+                <svg width="32" height="32" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+        </div>
+
+        <div id="game-area">
+            <div class="progress-bar"><div class="progress-fill" id="game-progress"></div></div>
+            <div class="huge-letter" id="game-letter" onclick="tocarLetraGame()">?</div>
+            <div class="validation-controls" id="game-controls">
+                <button class="btn-flat red" onclick="registrarResposta(false)" style="width: 70px; height: 70px; border-radius: 50%;">
+                    <svg width="36" height="36" fill="white" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+                <button class="btn-flat green" onclick="registrarResposta(true)" style="width: 70px; height: 70px; border-radius: 50%;">
+                    <svg width="36" height="36" fill="white" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <main class="screen" id="mod2-screen">
+        <div class="lousa-controls">
+            <div class="tabs" style="margin:0;">
+                <button class="tab-btn active" style="padding: 5px 8px; font-size: 0.9rem;" id="btn-filtro-lousa" onclick="alternarFiltroLousa()">A-Z</button>
+                <button class="tab-btn" style="padding: 5px 8px; font-size: 0.9rem;" id="btn-dica-lousa" onclick="alternarDica()">
+                    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                </button>
+                <button class="tab-btn active" style="padding: 5px 8px; font-size: 0.9rem;" id="btn-cores-lousa" onclick="alternarCores()">
+                    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S15.67 9 16.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                </button>
+                <button class="tab-btn active" style="padding: 5px 8px; font-size: 0.9rem;" id="btn-audio-lousa" onclick="alternarAudioLousa()">
+                    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                </button>
+            </div>
+            
+            <div class="slot-controls">
+                <button class="slot-btn" onclick="mudarSlots(-1)">-</button>
+                <span class="slot-display" id="slot-count">OFF</span>
+                <button class="slot-btn" onclick="mudarSlots(1)">+</button>
+            </div>
+
+            <button class="btn-flat green" style="padding: 8px 15px; font-size: 1rem;" id="btn-acao-lousa" onclick="acaoLousa()">
+                Desafio
+            </button>
+        </div>
+        
+        <div class="lousa-layout">
+            <div class="side-drawer" id="drawer-left"></div>
+            <div class="board-container">
+                <div class="board-zone" id="board-zone">
+                    <div class="slots-wrapper" id="slots-wrapper"></div>
+                </div>
+                <div class="bottom-drawer" id="drawer-bottom"></div>
+            </div>
+            <div class="side-drawer right" id="drawer-right"></div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="custom-modal" onclick="fecharModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header" id="modal-title"></div>
+            <div class="modal-body" id="modal-text"></div>
+            <div class="modal-footer" id="modal-actions"></div>
+        </div>
+    </div>
+
+    <script>
+        /* INFRAESTRUTURA E TTS */
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+        
+        function enviarParaKodular(texto) {
+            if (window.AppInventor) {
+                window.AppInventor.setWebViewString(texto);
+            } else {
+                console.log("Kodular (Simulação):", texto);
+                if (texto.startsWith("FALAR:")) {
+                    let utterance = new SpeechSynthesisUtterance(texto.replace("FALAR:", ""));
+                    utterance.lang = 'pt-BR';
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+        }
+
+        const alfabeto = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+        const vogais = ["A", "E", "I", "O", "U"];
+        const consoantes = alfabeto.filter(l => !vogais.includes(l));
+        let state = 'MENU'; 
+
+        function handleAndroidBack() {
+            const modal = document.getElementById('custom-modal');
+            if (modal.classList.contains('active')) return fecharModalPeloBotao();
+            if (state === 'MOD1_GAME') return abrirModulo1();
+            if (state === 'MOD2_DESAFIO') return confirmarSaidaDesafio();
+            if (state === 'MOD1_STUDY' || state === 'MOD2_BOARD') return voltarMenu();
+            if (state === 'MENU') enviarParaKodular('VOLTAR_MENU');
+        }
+
+        function switchScreen(id, title, newState) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('header-title').innerText = title;
+            state = newState;
+        }
+        function voltarMenu() { switchScreen('menu-screen', 'Abecê - HUB', 'MENU'); }
+
+        function mostrarModal(titulo, texto, html = '') {
+            document.getElementById('modal-title').innerText = titulo;
+            document.getElementById('modal-text').innerHTML = texto;
+            document.getElementById('modal-actions').innerHTML = html || '<button class="btn-flat" onclick="fecharModalPeloBotao()">Fechar</button>';
+            document.getElementById('custom-modal').classList.add('active');
+        }
+        function fecharModal(e) { if (e.target.id === 'custom-modal') fecharModalPeloBotao(); }
+        function fecharModalPeloBotao() { document.getElementById('custom-modal').classList.remove('active'); }
+
+        /* MÓDULO 1: ALFABETO SONORO */
+        let letrasMod1 = alfabeto, filaJogo = [], errosJogo = [], indiceJogo = 0;
+
+        function abrirModulo1() {
+            switchScreen('mod1-screen', 'Alfabeto Sonoro', 'MOD1_STUDY');
+            document.getElementById('study-area').style.display = 'flex';
+            document.getElementById('game-area').style.display = 'none';
+            filtrarLetrasMod1('COMPLETO');
+        }
+
+        function filtrarLetrasMod1(f) {
+            document.querySelectorAll('#mod1-screen .tab-btn').forEach(b => b.classList.remove('active'));
+            event?.target?.classList?.add('active');
+            letrasMod1 = f === 'VOGAIS' ? vogais : (f === 'CONSOANTES' ? consoantes : alfabeto);
+            const grid = document.getElementById('study-grid');
+            grid.innerHTML = '';
+            letrasMod1.forEach(l => {
+                let b = document.createElement('div'); b.className = 'letter-btn'; b.innerText = l;
+                b.onclick = () => enviarParaKodular('FALAR:' + l);
+                grid.appendChild(b);
+            });
+        }
+
+        function iniciarGameMod1() {
+            state = 'MOD1_GAME'; document.getElementById('study-area').style.display = 'none';
+            document.getElementById('game-area').style.display = 'flex';
+            filaJogo = [...letrasMod1].sort(() => Math.random() - 0.5);
+            errosJogo = []; indiceJogo = 0; carregarLetraGame();
+        }
+        function carregarLetraGame() {
+            document.getElementById('game-controls').style.display = 'none';
+            document.getElementById('game-letter').innerText = filaJogo[indiceJogo];
+            document.getElementById('game-progress').style.width = ((indiceJogo / filaJogo.length) * 100) + '%';
+            // Tocar letra automático removido. Aguarda clique na lousa.
+        }
+        function tocarLetraGame() {
+            enviarParaKodular('FALAR:' + filaJogo[indiceJogo]);
+            document.getElementById('game-controls').style.display = 'flex';
+        }
+        function registrarResposta(acertou) {
+            if (!acertou) errosJogo.push(filaJogo[indiceJogo]);
+            indiceJogo++;
+            indiceJogo < filaJogo.length ? carregarLetraGame() : finalizarGameMod1();
+        }
+        function finalizarGameMod1() {
+            document.getElementById('game-progress').style.width = '100%';
+            let msg = errosJogo.length === 0 ? "<p>Excelente!</p>" : `<p>Revisar:</p><h3 style="color:var(--danger);text-align:center;">${errosJogo.join(' - ')}</h3>`;
+            mostrarModal("Concluído!", msg, `<button class="btn-flat" onclick="fecharModalPeloBotao(); abrirModulo1();">Menu</button>`);
+        }
+
+        /* MÓDULO 2: ALFABETO MÓVEL */
+        let filtroLousa = 0, filtros = ['A-Z', 'Vogais', 'Cons.'];
+        let modoDica = false, coresAtivas = true, audioLousaAtivo = true;
+        let qtdSlots = 0; 
+        let palavraDesafio = []; 
+        let draggedClone = null, offsetX = 0, offsetY = 0;
+
+        function abrirModulo2() {
+            switchScreen('mod2-screen', 'Alfabeto Móvel', 'MOD2_BOARD');
+            restaurarLousaLivre(); renderizarGavetas(); gerarSlots();
+        }
+
+        function mudarSlots(val) {
+            if (state === 'MOD2_DESAFIO') return; 
+            qtdSlots += val;
+            if (qtdSlots < 0) qtdSlots = 0;
+            if (qtdSlots > 10) qtdSlots = 10;
+            document.getElementById('slot-count').innerText = qtdSlots === 0 ? "OFF" : qtdSlots;
+            document.querySelectorAll('.slot .board-letter').forEach(el => el.remove());
+            gerarSlots();
+        }
+
+        function gerarSlots() {
+            const wrapper = document.getElementById('slots-wrapper');
+            wrapper.innerHTML = '';
+            for(let i=0; i<qtdSlots; i++) {
+                let slot = document.createElement('div');
+                slot.className = 'slot';
+                wrapper.appendChild(slot);
+            }
+        }
+
+        function alternarFiltroLousa() {
+            if (state === 'MOD2_DESAFIO') return;
+            filtroLousa = (filtroLousa + 1) % 3;
+            document.getElementById('btn-filtro-lousa').innerText = filtros[filtroLousa];
+            renderizarGavetas();
+        }
+
+        function alternarDica() {
+            modoDica = !modoDica;
+            document.getElementById('btn-dica-lousa').classList.toggle('active', modoDica);
+        }
+
+        function alternarCores() {
+            coresAtivas = !coresAtivas;
+            document.getElementById('btn-cores-lousa').classList.toggle('active', coresAtivas);
+            document.body.classList.toggle('hide-vowels', !coresAtivas);
+        }
+
+        function alternarAudioLousa() {
+            audioLousaAtivo = !audioLousaAtivo;
+            document.getElementById('btn-audio-lousa').classList.toggle('active', audioLousaAtivo);
+        }
+
+        function renderizarGavetas() {
+            const drL = document.getElementById('drawer-left'), drR = document.getElementById('drawer-right'), drB = document.getElementById('drawer-bottom');
+            drL.innerHTML = ''; drR.innerHTML = ''; drB.innerHTML = '';
+            
+            let arr = filtroLousa === 1 ? vogais : (filtroLousa === 2 ? consoantes : alfabeto);
+            
+            arr.forEach((letra, index) => {
+                let el = document.createElement('div'); el.className = 'draggable-letter';
+                if(vogais.includes(letra)) el.classList.add('vowel');
+                el.innerText = letra;
+                el.addEventListener('pointerdown', iniciarArrasteGaveta);
+                
+                if (arr.length <= 5) { drB.appendChild(el); } 
+                else {
+                    if (index < 8) drL.appendChild(el);
+                    else if (index < 16) drR.appendChild(el);
+                    else drB.appendChild(el);
+                }
+            });
+        }
+
+        function iniciarArrasteGaveta(e) {
+            e.preventDefault();
+            draggedClone = document.createElement('div');
+            draggedClone.className = 'board-letter ' + (vogais.includes(e.target.innerText) ? 'vowel' : '');
+            draggedClone.innerText = e.target.innerText;
+            
+            document.body.appendChild(draggedClone);
+            draggedClone.style.position = 'fixed';
+            draggedClone.style.zIndex = 1000;
+            
+            offsetX = 37.5; 
+            offsetY = 37.5;
+            moverClone(e.clientX, e.clientY);
+
+            document.addEventListener('pointermove', arrastarClone);
+            document.addEventListener('pointerup', soltarClone);
+        }
+
+        function iniciarArrasteLousa(e) {
+            e.preventDefault();
+            if(e.target.classList.contains('ghost-letter')) return;
+            
+            draggedClone = e.target;
+            const rect = draggedClone.getBoundingClientRect();
+            
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+
+            document.body.appendChild(draggedClone);
+            draggedClone.style.position = 'fixed';
+            draggedClone.style.left = rect.left + 'px';
+            draggedClone.style.top = rect.top + 'px';
+            draggedClone.style.zIndex = 1000;
+            draggedClone.style.transform = 'none'; 
+            
+            document.addEventListener('pointermove', arrastarClone);
+            document.addEventListener('pointerup', soltarClone);
+        }
+
+        function arrastarClone(e) {
+            if(draggedClone) moverClone(e.clientX, e.clientY);
+        }
+        function moverClone(x, y) {
+            draggedClone.style.left = (x - offsetX) + 'px';
+            draggedClone.style.top = (y - offsetY) + 'px';
+        }
+
+        function soltarClone(e) {
+            document.removeEventListener('pointermove', arrastarClone);
+            document.removeEventListener('pointerup', soltarClone);
+            if(!draggedClone) return;
+
+            const board = document.getElementById('board-zone');
+            const bRect = board.getBoundingClientRect();
+            const cloneRect = draggedClone.getBoundingClientRect();
+            const cx = cloneRect.left + cloneRect.width/2;
+            const cy = cloneRect.top + cloneRect.height/2;
+
+            let snapped = false;
+
+            if (qtdSlots > 0) {
+                const slots = document.querySelectorAll('.slot');
+                for (let slot of slots) {
+                    const sRect = slot.getBoundingClientRect();
+                    if (cx > sRect.left && cx < sRect.right && cy > sRect.top && cy < sRect.bottom) {
+                        const hasLetter = Array.from(slot.children).some(c => c.classList.contains('board-letter') && !c.classList.contains('ghost-letter'));
+                        if (!hasLetter) {
+                            slot.appendChild(draggedClone);
+                            draggedClone.style.position = 'absolute';
+                            draggedClone.style.left = '50%';
+                            draggedClone.style.top = '50%';
+                            draggedClone.style.transform = 'translate(-50%, -50%)'; 
+                            snapped = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!snapped) {
+                if (cx > bRect.left && cx < bRect.right && cy > bRect.top && cy < bRect.bottom) {
+                    board.appendChild(draggedClone);
+                    draggedClone.style.position = 'absolute';
+                    draggedClone.style.left = (cx - bRect.left - draggedClone.offsetWidth/2) + 'px';
+                    draggedClone.style.top = (cy - bRect.top - draggedClone.offsetHeight/2) + 'px';
+                    draggedClone.style.transform = 'none';
+                } else {
+                    draggedClone.remove(); 
+                }
+            }
+
+            if (draggedClone && draggedClone.parentNode) {
+                draggedClone.addEventListener('pointerdown', iniciarArrasteLousa);
+                if (audioLousaAtivo) {
+                    enviarParaKodular('FALAR:' + draggedClone.innerText);
+                }
+            }
+            draggedClone = null;
+        }
+
+        function acaoLousa() {
+            state === 'MOD2_BOARD' ? lancarDesafio() : verificarDesafio();
+        }
+
+        function lancarDesafio() {
+            palavraDesafio = [];
+            
+            if (qtdSlots > 0) {
+                const slots = document.querySelectorAll('.slot');
+                slots.forEach(slot => {
+                    const letraDom = slot.querySelector('.board-letter');
+                    if (letraDom) {
+                        palavraDesafio.push(letraDom.innerText);
+                        letraDom.remove();
+                    } else {
+                        palavraDesafio.push(""); 
+                    }
+                });
+
+                if (palavraDesafio.join('') === "") return mostrarModal("Ops", "Preencha os slots primeiro.");
+                
+                if (modoDica) {
+                    slots.forEach((slot, index) => {
+                        if (palavraDesafio[index] !== "") {
+                            let ghost = document.createElement('div');
+                            ghost.className = 'ghost-letter';
+                            ghost.innerText = palavraDesafio[index];
+                            slot.appendChild(ghost);
+                        }
+                    });
+                }
+            } else {
+                let letrasLivre = Array.from(document.querySelectorAll('#board-zone > .board-letter'));
+                if (letrasLivre.length === 0) return mostrarModal("Ops", "Escreva uma palavra na lousa.");
+                letrasLivre.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
+                palavraDesafio = letrasLivre.map(el => el.innerText);
+                letrasLivre.forEach(el => el.remove());
+            }
+
+            state = 'MOD2_DESAFIO';
+            let btn = document.getElementById('btn-acao-lousa');
+            btn.innerText = "Verificar"; btn.classList.replace('green', 'red');
+            document.querySelectorAll('.slot-btn').forEach(b => b.disabled = true);
+            document.getElementById('btn-filtro-lousa').disabled = true;
+        }
+
+        function verificarDesafio() {
+            let montada = [];
+            
+            if (qtdSlots > 0) {
+                document.querySelectorAll('.slot').forEach(slot => {
+                    const letraDom = slot.querySelector('.board-letter:not(.ghost-letter)');
+                    montada.push(letraDom ? letraDom.innerText : "");
+                });
+            } else {
+                let letrasLivre = Array.from(document.querySelectorAll('#board-zone > .board-letter'));
+                letrasLivre.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
+                montada = letrasLivre.map(el => el.innerText);
+            }
+
+            if (montada.join('') === palavraDesafio.join('') && montada.join('') !== "") {
+                mostrarModal("Parabéns!", "Você formou a palavra correta!", `<button class="btn-flat green" onclick="fecharModalPeloBotao(); restaurarLousaLivre();">Nova Palavra</button>`);
+            } else {
+                mostrarModal("Quase lá!", "Tente arrastar as letras para formar a palavra corretamente.");
+            }
+        }
+
+        function restaurarLousaLivre() {
+            state = 'MOD2_BOARD'; palavraDesafio = [];
+            document.querySelectorAll('.board-letter, .ghost-letter').forEach(el => el.remove());
+            let btn = document.getElementById('btn-acao-lousa');
+            btn.innerText = "Desafio"; btn.classList.replace('red', 'green');
+            document.querySelectorAll('.slot-btn').forEach(b => b.disabled = false);
+            document.getElementById('btn-filtro-lousa').disabled = false;
+        }
+
+        function confirmarSaidaDesafio() {
+            mostrarModal("Sair?", "Deseja cancelar este desafio?", 
+            `<button class="btn-flat red" onclick="fecharModalPeloBotao(); restaurarLousaLivre();">Sim, cancelar</button>
+             <button class="btn-flat" onclick="fecharModalPeloBotao()">Continuar</button>`);
+        }
+    </script>
+</body>
+</html>

@@ -485,6 +485,16 @@
             e.preventDefault();
             if(e.target.classList.contains('ghost-letter')) return;
             
+            // --- VERIFICAÇÃO DE DUPLO CLIQUE (EXCLUSÃO) ---
+            const now = Date.now();
+            const lastTap = parseInt(e.target.dataset.lastTap) || 0;
+            if (now - lastTap < 300) { 
+                e.target.remove();
+                return; // Encerra a função, a letra foi excluída e não será arrastada
+            }
+            e.target.dataset.lastTap = now;
+            // ----------------------------------------------
+            
             draggedClone = e.target;
             const rect = draggedClone.getBoundingClientRect();
             

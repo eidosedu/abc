@@ -371,7 +371,6 @@
             document.getElementById('game-controls').style.display = 'none';
             document.getElementById('game-letter').innerText = filaJogo[indiceJogo];
             document.getElementById('game-progress').style.width = ((indiceJogo / filaJogo.length) * 100) + '%';
-            // Tocar letra automático removido. Aguarda clique na lousa.
         }
         function tocarLetraGame() {
             enviarParaKodular('FALAR:' + filaJogo[indiceJogo]);
@@ -499,6 +498,10 @@
             draggedClone.style.zIndex = 1000;
             draggedClone.style.transform = 'none'; 
             
+            if (e.pointerId) {
+                draggedClone.setPointerCapture(e.pointerId);
+            }
+            
             document.addEventListener('pointermove', arrastarClone);
             document.addEventListener('pointerup', soltarClone);
         }
@@ -514,7 +517,12 @@
         function soltarClone(e) {
             document.removeEventListener('pointermove', arrastarClone);
             document.removeEventListener('pointerup', soltarClone);
+            
             if(!draggedClone) return;
+
+            if (e.pointerId && draggedClone.hasPointerCapture(e.pointerId)) {
+                draggedClone.releasePointerCapture(e.pointerId);
+            }
 
             const board = document.getElementById('board-zone');
             const bRect = board.getBoundingClientRect();
